@@ -120,6 +120,7 @@ exports.editMessage = async (req, res) => {
 
     if (global.io) {
       global.io
+        .to(`user:${String(message.senderId)}`)
         .to(`user:${String(message.receiverId)}`)
         .emit("messageUpdated", message.toObject());
     }

@@ -40,18 +40,18 @@ const useGetRealTimeMessage = () => {
     const handleUpdatedMessage = (updatedMessage) => {
       if (!updatedMessage) return;
 
-      const selectedUserId = normalizeId(selectedUser);
-      const isRelevantMessage =
-        normalizeId(updatedMessage.senderId) === selectedUserId ||
-        normalizeId(updatedMessage.receiverId) === selectedUserId;
-      if (!isRelevantMessage) return;
+      const currentMessages = Array.isArray(messages) ? messages : [];
+      const messageId = normalizeId(updatedMessage._id);
+      if (
+        !currentMessages.some((item) => normalizeId(item._id) === messageId)
+      ) {
+        return;
+      }
 
       dispatch(
         setMessages(
-          (Array.isArray(messages) ? messages : []).map((item) =>
-            normalizeId(item._id) === normalizeId(updatedMessage._id)
-              ? updatedMessage
-              : item,
+          currentMessages.map((item) =>
+            normalizeId(item._id) === messageId ? updatedMessage : item,
           ),
         ),
       );
