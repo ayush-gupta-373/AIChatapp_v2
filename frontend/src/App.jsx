@@ -88,24 +88,29 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
-  const { socket } = useSelector((store) => store.socket);
   const { authUser } = useSelector((store) => store.user);
   const dispatch = useDispatch();
 
   useEffect(() => {
     if (authUser) {
       const newSocket = io(API_BASE_URL, {
+        withCredentials: true,
         query: { userId: authUser._id },
       });
 
       dispatch(setSocket(newSocket));
 
-      if (socket) {
-        socket.off("getOnlineUsers");
-      }
-
       newSocket.on("getOnlineUsers", (onlineUsers) => {
         dispatch(setOnlineUsers(onlineUsers));
+      });
+
+      newSocket.on("connect_error", (error) => {
+        console.error("Socket connection failed:", error.message);
+        dispatch(setOnlineUsers([]));
+      });
+
+      newSocket.on("disconnect", () => {
+        dispatch(setOnlineUsers([]));
       });
 
       return () => {
@@ -114,9 +119,9 @@ function App() {
       };
     }
 
-    socket?.disconnect();
     dispatch(setSocket(null));
-  }, [authUser]);
+    dispatch(setOnlineUsers([]));
+  }, [authUser, dispatch]);
 
   return (
     <div className="flex items-center justify-center">

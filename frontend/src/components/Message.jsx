@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
+import { FiMoreVertical } from "react-icons/fi";
 import { setMessages } from "../redux/messageSlice";
 import API_BASE_URL from "../config";
 
@@ -136,7 +137,7 @@ const Message = ({ message, authUser }) => {
 
   const openMenu = (clientX, clientY) => {
     const menuWidth = 230;
-    const menuHeight = 90;
+    const menuHeight = 240;
     setMenuPosition({
       x: Math.max(8, Math.min(clientX, window.innerWidth - menuWidth - 8)),
       y: Math.max(8, Math.min(clientY, window.innerHeight - menuHeight - 8)),
@@ -230,8 +231,17 @@ const Message = ({ message, authUser }) => {
                 {message.attachment.name || "Open attachment"}
               </a>
             ))}
-          <div className="mt-1 text-right text-[10px] text-slate-300/70">
-            {formatMessageTime(message?.createdAt)}
+          <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-slate-300/70">
+            <span>{formatMessageTime(message?.createdAt)}</span>
+            <button
+              type="button"
+              onClick={(event) => openMenu(event.clientX, event.clientY)}
+              className="rounded p-1 text-slate-300 hover:bg-white/10 hover:text-white"
+              aria-label="Message options"
+              title="Message options"
+            >
+              <FiMoreVertical size={14} />
+            </button>
           </div>
           {showMenu && (
             <div
