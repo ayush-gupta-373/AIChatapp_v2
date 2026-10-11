@@ -12,15 +12,16 @@ import API_BASE_URL from "../config";
 const Sidebar = () => {
   useGetOtherUsers();
 
-  const { otherUser } = useSelector((store) => store.user);
+  const { otherUser, authUser } = useSelector((store) => store.user);
   const dispatch = useDispatch();
 
   const [search, setSearch] = useState("");
   const searchValue = search.trim().toLowerCase();
   const filteredUsers = (otherUser || []).filter(
     (user) =>
-      user.fullName.toLowerCase().includes(searchValue) ||
-      user.username.toLowerCase().includes(searchValue),
+      String(user._id) !== String(authUser?._id) &&
+      ((user.fullName || "").toLowerCase().includes(searchValue) ||
+        (user.username || "").toLowerCase().includes(searchValue)),
   );
 
   const navigate = useNavigate();

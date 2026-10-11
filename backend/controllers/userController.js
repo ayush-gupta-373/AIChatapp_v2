@@ -97,8 +97,11 @@ exports.logout=async (req, res,next) => {
 exports.getOtherUsers=async (req, res,next) => {
   try
   {
-    const loggedInUserId=req.id;
-    const otherUsers=await User.find({_id: {$ne: loggedInUserId}}).select("-password");
+    const loggedInUserId = String(req.id);
+    const users = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
+    const otherUsers = users.filter(
+      (user) => String(user._id) !== loggedInUserId,
+    );
     return res.status(200).json(
       otherUsers
     )
