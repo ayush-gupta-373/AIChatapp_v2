@@ -2,6 +2,14 @@ import { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { setMessages } from "../redux/messageSlice";
 
+const normalizeId = (value) => {
+  const id =
+    value && typeof value === "object"
+      ? (value._id ?? value.id ?? value.$oid)
+      : value;
+  return String(id ?? "");
+};
+
 const useGetRealTimeMessage = () => {
   const dispatch = useDispatch();
   const { socket } = useSelector((store) => store.socket);
@@ -32,16 +40,18 @@ const useGetRealTimeMessage = () => {
     const handleUpdatedMessage = (updatedMessage) => {
       if (!updatedMessage) return;
 
-      const selectedUserId = String(selectedUser._id);
+      const selectedUserId = normalizeId(selectedUser);
       const isRelevantMessage =
-        String(updatedMessage.senderId) === selectedUserId ||
-        String(updatedMessage.receiverId) === selectedUserId;
+        normalizeId(updatedMessage.senderId) === selectedUserId ||
+        normalizeId(updatedMessage.receiverId) === selectedUserId;
       if (!isRelevantMessage) return;
 
       dispatch(
         setMessages(
           (Array.isArray(messages) ? messages : []).map((item) =>
-            item._id === updatedMessage._id ? updatedMessage : item,
+            normalizeId(item._id) === normalizeId(updatedMessage._id)
+              ? updatedMessage
+              : item,
           ),
         ),
       );

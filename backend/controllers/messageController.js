@@ -120,9 +120,8 @@ exports.editMessage = async (req, res) => {
 
     if (global.io) {
       global.io
-        .to(`user:${message.senderId}`)
-        .to(`user:${message.receiverId}`)
-        .emit("messageUpdated", message);
+        .to(`user:${String(message.receiverId)}`)
+        .emit("messageUpdated", message.toObject());
     }
 
     return res.status(200).json({ message });
