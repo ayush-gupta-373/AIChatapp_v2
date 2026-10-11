@@ -80,13 +80,18 @@ const requestAI = async (prompt) => {
 };
 
 const sendAIError = (res, error) => {
+  if (error.status === 429) {
+    return res.status(429).json({
+      code: "RATE_LIMITED",
+      message: "Gemini API rate limit reached. Please try again later.",
+    });
+  }
+
   const status = error.status === 401 || error.status === 403
     ? 502
-    : error.status === 429
-      ? 429
-      : error.status === 504
-        ? 504
-        : 503;
+    : error.status === 504
+      ? 504
+      : 503;
   return res.status(status).json({ message: error.message });
 };
 

@@ -32,7 +32,6 @@ const normalizeId = (value) => {
 
 const Message = ({ message, authUser }) => {
   const scroll = useRef();
-  const optionsButton = useRef();
   const dispatch = useDispatch();
   const { messages } = useSelector((store) => store.message);
   const [showMenu, setShowMenu] = useState(false);
@@ -148,26 +147,25 @@ const Message = ({ message, authUser }) => {
     }
   };
 
-  const toggleMenu = () => {
+  const toggleMenu = (event) => {
     if (showMenu) {
       setShowMenu(false);
       return;
     }
 
-    const buttonRect = optionsButton.current?.getBoundingClientRect();
-    if (!buttonRect) return;
+    const bubbleRect = event.currentTarget.getBoundingClientRect();
 
     const menuWidth = 240;
     const menuHeight = 260;
     const left = Math.max(
       8,
-      Math.min(buttonRect.right - menuWidth, window.innerWidth - menuWidth - 8),
+      Math.min(bubbleRect.right - menuWidth, window.innerWidth - menuWidth - 8),
     );
-    const belowTop = buttonRect.bottom + 8;
+    const belowTop = bubbleRect.bottom + 8;
     const top =
       belowTop + menuHeight <= window.innerHeight - 8
         ? belowTop
-        : Math.max(8, buttonRect.top - menuHeight - 8);
+        : Math.max(8, bubbleRect.top - menuHeight - 8);
 
     setMenuPosition({ x: left, y: top });
     setShowMenu(true);
@@ -179,6 +177,16 @@ const Message = ({ message, authUser }) => {
         className={`flex mb-3 ${isSentByCurrentUser ? "justify-end" : "justify-start"}`}
       >
         <div
+          onClick={(event) => {
+            if (
+              event.target.closest(
+                "button, input, select, textarea, a, audio, video, form",
+              )
+            ) {
+              return;
+            }
+            toggleMenu(event);
+          }}
           className={`relative max-w-[80%] sm:max-w-[70%] px-4 py-2.5 shadow-lg border border-white/10 ${isSentByCurrentUser ? "bg-indigo-500/90 rounded-2xl rounded-tr-sm" : "bg-slate-800/80 rounded-2xl rounded-tl-sm"}`}
         >
           {selectedReaction && (
@@ -257,17 +265,6 @@ const Message = ({ message, authUser }) => {
             ))}
           <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-slate-300/70">
             <span>{formatMessageTime(message?.createdAt)}</span>
-            <button
-              ref={optionsButton}
-              type="button"
-              onClick={toggleMenu}
-              className="rounded px-2 py-1 text-[11px] font-medium text-slate-200 hover:bg-white/10 hover:text-white"
-              aria-label="Message options"
-              title="Message options"
-              aria-expanded={showMenu}
-            >
-              Options
-            </button>
           </div>
           {showMenu &&
             createPortal(
@@ -275,12 +272,16 @@ const Message = ({ message, authUser }) => {
                 <button
                   type="button"
                   className="fixed inset-0 z-[9998] cursor-default"
-                  onClick={() => setShowMenu(false)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setShowMenu(false);
+                  }}
                   aria-label="Close message options"
                 />
                 <div
                   className="fixed z-[9999] max-h-[min(70vh,320px)] w-60 overflow-y-auto rounded-lg border border-white/10 bg-slate-950 p-2 shadow-2xl"
                   style={{ left: menuPosition.x, top: menuPosition.y }}
+                  onClick={(event) => event.stopPropagation()}
                   role="menu"
                   aria-label="Message actions"
                 >
