@@ -119,10 +119,20 @@ exports.editMessage = async (req, res) => {
     await message.save();
 
     if (global.io) {
-      global.io
-        .to(`user:${String(message.senderId)}`)
-        .to(`user:${String(message.receiverId)}`)
-        .emit("messageUpdated", message.toObject());
+      const participantIds = [
+        String(message.senderId),
+        String(message.receiverId),
+      ];
+      const socketIds = new Set(
+        participantIds.flatMap((userId) => [
+          ...(global.userSocketMap?.[userId] || []),
+        ]),
+      );
+      const updatedMessage = message.toObject();
+
+      for (const socketId of socketIds) {
+        global.io.to(socketId).emit("messageUpdated", updatedMessage);
+      }
     }
 
     return res.status(200).json({ message });
