@@ -20,7 +20,7 @@ const requestAI = async (prompt) => {
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.3,
-          maxOutputTokens: 180,
+          maxOutputTokens: 512,
         },
       }),
       signal: controller.signal,
@@ -77,7 +77,7 @@ const createLocalSummary = (messages) => {
 
   return [
     "Recent conversation highlights:",
-    ...recentMessages.map((message) => `- ${message.slice(0, 160)}`),
+    ...recentMessages.map((message) => `- ${message}`),
   ].join("\n");
 };
 

@@ -34,8 +34,8 @@ const Message = ({ message, authUser }) => {
   const [translationLanguage, setTranslationLanguage] = useState("Spanish");
   const [translatedText, setTranslatedText] = useState("");
   const [isTranslating, setIsTranslating] = useState(false);
-  const isSentByCurrentUser =
-    String(message?.senderId) === String(authUser?._id);
+  const messageSenderId = message?.senderId?._id ?? message?.senderId;
+  const isSentByCurrentUser = String(messageSenderId) === String(authUser?._id);
 
   useEffect(() => {
     scroll.current?.scrollIntoView({
@@ -236,11 +236,12 @@ const Message = ({ message, authUser }) => {
             <button
               type="button"
               onClick={(event) => openMenu(event.clientX, event.clientY)}
-              className="rounded p-1 text-slate-300 hover:bg-white/10 hover:text-white"
+              className="flex items-center gap-1 rounded px-2 py-1 text-[11px] text-slate-300 hover:bg-white/10 hover:text-white"
               aria-label="Message options"
               title="Message options"
             >
               <FiMoreVertical size={14} />
+              <span>Options</span>
             </button>
           </div>
           {showMenu && (

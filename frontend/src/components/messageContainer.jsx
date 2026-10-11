@@ -81,12 +81,14 @@ const MessageContainer = () => {
           </div>
 
           {aiResult && (
-            <div className="border-b border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-slate-200">
-              {aiResult}
+            <div className="flex max-h-56 items-start gap-3 overflow-y-auto border-b border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-slate-200">
+              <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">
+                {aiResult}
+              </p>
               <button
                 type="button"
                 onClick={() => setAiResult("")}
-                className="ml-3 text-xs text-indigo-300"
+                className="shrink-0 text-xs text-indigo-300"
               >
                 Close
               </button>
