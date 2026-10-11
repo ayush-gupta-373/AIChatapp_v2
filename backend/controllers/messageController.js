@@ -1,10 +1,6 @@
 const Conversation = require("../models/conversationModel");
 const Message = require("../models/messageModel");
 
-const getReceiverSocketId = (receiverId) => {
-  return global.userSocketMap?.[receiverId];
-};
-
 const saveMessage = async ({ senderId, receiverId, message = "", attachment = {} }) => {
   let conversation = await Conversation.findOne({
     participants: { $all: [senderId, receiverId] },
@@ -18,8 +14,9 @@ const saveMessage = async ({ senderId, receiverId, message = "", attachment = {}
   conversation.messages.push(newMessage._id);
   await conversation.save();
 
-  const receiverSocketId = getReceiverSocketId(receiverId);
-  if (receiverSocketId && global.io) global.io.to(receiverSocketId).emit("newMessage", newMessage);
+  if (global.io) {
+    global.io.to(`user:${receiverId}`).emit("newMessage", newMessage);
+  }
   return newMessage;
 };
 
@@ -182,9 +179,8 @@ exports.deleteMessageForEveryone = async (req, res) => {
       { $pull: { messages: message._id } },
     );
 
-    const receiverSocketId = getReceiverSocketId(message.receiverId);
-    if (receiverSocketId && global.io) {
-      global.io.to(receiverSocketId).emit("messageDeleted", {
+    if (global.io) {
+      global.io.to(`user:${message.receiverId}`).emit("messageDeleted", {
         messageId: String(message._id),
       });
     }

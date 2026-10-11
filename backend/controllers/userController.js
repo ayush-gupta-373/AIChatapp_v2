@@ -3,7 +3,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { uploadToCloudinary } = require("../config/cloudinary");
 
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction =
+  process.env.NODE_ENV === "production" || process.env.RENDER === "true";
 
 const getCookieOptions = () => ({
   httpOnly: true,

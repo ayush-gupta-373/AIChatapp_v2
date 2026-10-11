@@ -64,7 +64,7 @@ const Message = ({ message, authUser }) => {
         ),
       );
     } catch (error) {
-      console.log(error);
+      toast.error(error.response?.data?.message || "Unable to update reaction");
     }
   };
 
@@ -101,7 +101,7 @@ const Message = ({ message, authUser }) => {
       setIsEditing(false);
       setShowMenu(false);
     } catch (error) {
-      console.log(error);
+      toast.error(error.response?.data?.message || "Unable to edit message");
     }
   };
 

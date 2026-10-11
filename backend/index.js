@@ -9,7 +9,7 @@ dotenv.config();
 
 const allowedOrigins = [
   "http://localhost:5173",
-  process.env.FRONTEND_URL,
+  process.env.FRONTEND_URL?.replace(/\/+$/, ""),
 ].filter(Boolean);
 
 const corsOptions = {
@@ -52,14 +52,18 @@ io.on("connection", (socket) => {
   const userId = socket.handshake.query.userId;
 
   if (userId) {
-    userSocketMap[userId] = socket.id;
+    socket.join(`user:${userId}`);
+    userSocketMap[userId] ??= new Set();
+    userSocketMap[userId].add(socket.id);
   }
 
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   socket.on("disconnect", () => {
     if (userId) {
-      delete userSocketMap[userId];
+      const userSockets = userSocketMap[userId];
+      userSockets?.delete(socket.id);
+      if (userSockets?.size === 0) delete userSocketMap[userId];
     }
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
