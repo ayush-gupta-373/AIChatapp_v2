@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
-import { FiMoreVertical } from "react-icons/fi";
+import { createPortal } from "react-dom";
 import { setMessages } from "../redux/messageSlice";
 import API_BASE_URL from "../config";
 
@@ -32,6 +32,7 @@ const normalizeId = (value) => {
 
 const Message = ({ message, authUser }) => {
   const scroll = useRef();
+  const optionsButton = useRef();
   const dispatch = useDispatch();
   const { messages } = useSelector((store) => store.message);
   const [showMenu, setShowMenu] = useState(false);
@@ -147,13 +148,28 @@ const Message = ({ message, authUser }) => {
     }
   };
 
-  const openMenu = (clientX, clientY) => {
-    const menuWidth = 230;
-    const menuHeight = 240;
-    setMenuPosition({
-      x: Math.max(8, Math.min(clientX, window.innerWidth - menuWidth - 8)),
-      y: Math.max(8, Math.min(clientY, window.innerHeight - menuHeight - 8)),
-    });
+  const toggleMenu = () => {
+    if (showMenu) {
+      setShowMenu(false);
+      return;
+    }
+
+    const buttonRect = optionsButton.current?.getBoundingClientRect();
+    if (!buttonRect) return;
+
+    const menuWidth = 240;
+    const menuHeight = 260;
+    const left = Math.max(
+      8,
+      Math.min(buttonRect.right - menuWidth, window.innerWidth - menuWidth - 8),
+    );
+    const belowTop = buttonRect.bottom + 8;
+    const top =
+      belowTop + menuHeight <= window.innerHeight - 8
+        ? belowTop
+        : Math.max(8, buttonRect.top - menuHeight - 8);
+
+    setMenuPosition({ x: left, y: top });
     setShowMenu(true);
   };
 
@@ -163,10 +179,6 @@ const Message = ({ message, authUser }) => {
         className={`flex mb-3 ${isSentByCurrentUser ? "justify-end" : "justify-start"}`}
       >
         <div
-          onContextMenu={(event) => {
-            event.preventDefault();
-            openMenu(event.clientX, event.clientY);
-          }}
           className={`relative max-w-[80%] sm:max-w-[70%] px-4 py-2.5 shadow-lg border border-white/10 ${isSentByCurrentUser ? "bg-indigo-500/90 rounded-2xl rounded-tr-sm" : "bg-slate-800/80 rounded-2xl rounded-tl-sm"}`}
         >
           {selectedReaction && (
@@ -246,105 +258,118 @@ const Message = ({ message, authUser }) => {
           <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-slate-300/70">
             <span>{formatMessageTime(message?.createdAt)}</span>
             <button
+              ref={optionsButton}
               type="button"
-              onClick={(event) => openMenu(event.clientX, event.clientY)}
-              className="flex items-center gap-1 rounded px-2 py-1 text-[11px] text-slate-300 hover:bg-white/10 hover:text-white"
+              onClick={toggleMenu}
+              className="rounded px-2 py-1 text-[11px] font-medium text-slate-200 hover:bg-white/10 hover:text-white"
               aria-label="Message options"
               title="Message options"
+              aria-expanded={showMenu}
             >
-              <FiMoreVertical size={14} />
-              <span>Options</span>
+              Options
             </button>
           </div>
-          {showMenu && (
-            <div
-              className="fixed z-100 min-w-44 rounded-lg border border-white/10 bg-slate-950 p-2 shadow-2xl"
-              style={{ left: menuPosition.x, top: menuPosition.y }}
-            >
-              <div className="flex flex-wrap gap-1">
-                {["❤️", "👍", "😂"].map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() => {
-                      toggleReaction(emoji);
-                      setShowMenu(false);
-                    }}
-                    className="rounded px-2 py-1 text-sm hover:bg-white/10"
-                  >
-                    {emoji}
-                  </button>
-                ))}
-                {message?.message && (
-                  <div className="flex w-full items-center gap-1">
-                    <select
-                      value={translationLanguage}
-                      onChange={(event) =>
-                        setTranslationLanguage(event.target.value)
-                      }
-                      className="min-w-0 flex-1 rounded bg-slate-900 px-2 py-1 text-xs text-slate-200 outline-none"
-                      aria-label="Translation language"
-                    >
-                      {translationLanguages.map((language) => (
-                        <option key={language} value={language}>
-                          {language}
-                        </option>
-                      ))}
-                    </select>
+          {showMenu &&
+            createPortal(
+              <>
+                <button
+                  type="button"
+                  className="fixed inset-0 z-[9998] cursor-default"
+                  onClick={() => setShowMenu(false)}
+                  aria-label="Close message options"
+                />
+                <div
+                  className="fixed z-[9999] max-h-[min(70vh,320px)] w-60 overflow-y-auto rounded-lg border border-white/10 bg-slate-950 p-2 shadow-2xl"
+                  style={{ left: menuPosition.x, top: menuPosition.y }}
+                  role="menu"
+                  aria-label="Message actions"
+                >
+                  <div className="flex flex-wrap gap-1">
+                    {["❤️", "👍", "😂"].map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => {
+                          toggleReaction(emoji);
+                          setShowMenu(false);
+                        }}
+                        className="rounded px-2 py-1 text-sm hover:bg-white/10"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                    {message?.message && (
+                      <div className="flex w-full items-center gap-1">
+                        <select
+                          value={translationLanguage}
+                          onChange={(event) =>
+                            setTranslationLanguage(event.target.value)
+                          }
+                          className="min-w-0 flex-1 rounded bg-slate-900 px-2 py-1 text-xs text-slate-200 outline-none"
+                          aria-label="Translation language"
+                        >
+                          {translationLanguages.map((language) => (
+                            <option key={language} value={language}>
+                              {language}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            translateMessage();
+                            setShowMenu(false);
+                          }}
+                          disabled={isTranslating}
+                          className="rounded px-2 py-1 text-xs text-indigo-300 hover:bg-white/10 disabled:opacity-50"
+                        >
+                          {isTranslating ? "..." : "Translate"}
+                        </button>
+                      </div>
+                    )}
+                    {isSentByCurrentUser && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditedText(message.message);
+                            setIsEditing(true);
+                            setShowMenu(false);
+                          }}
+                          className="rounded px-2 py-1 text-xs text-slate-200 hover:bg-white/10"
+                        >
+                          Edit
+                        </button>
+                      </>
+                    )}
                     <button
                       type="button"
-                      onClick={() => {
-                        translateMessage();
-                        setShowMenu(false);
-                      }}
-                      disabled={isTranslating}
-                      className="rounded px-2 py-1 text-xs text-indigo-300 hover:bg-white/10 disabled:opacity-50"
+                      onClick={deleteMessageForMe}
+                      className="rounded px-2 py-1 text-xs text-red-300 hover:bg-red-500/10"
                     >
-                      {isTranslating ? "..." : "Translate"}
+                      Delete for me
+                    </button>
+                    {isSentByCurrentUser && (
+                      <button
+                        type="button"
+                        onClick={deleteMessageForEveryone}
+                        className="rounded px-2 py-1 text-xs text-red-300 hover:bg-red-500/10"
+                      >
+                        Delete for everyone
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowMenu(false)}
+                      className="rounded px-2 py-1 text-xs text-slate-400 hover:bg-white/10"
+                    >
+                      Close
                     </button>
                   </div>
-                )}
-                {isSentByCurrentUser && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditedText(message.message);
-                        setIsEditing(true);
-                        setShowMenu(false);
-                      }}
-                      className="rounded px-2 py-1 text-xs text-slate-200 hover:bg-white/10"
-                    >
-                      Edit
-                    </button>
-                  </>
-                )}
-                <button
-                  type="button"
-                  onClick={deleteMessageForMe}
-                  className="rounded px-2 py-1 text-xs text-red-300 hover:bg-red-500/10"
-                >
-                  Delete for me
-                </button>
-                {isSentByCurrentUser && (
-                  <button
-                    type="button"
-                    onClick={deleteMessageForEveryone}
-                    className="rounded px-2 py-1 text-xs text-red-300 hover:bg-red-500/10"
-                  >
-                    Delete for everyone
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setShowMenu(false)}
-                  className="rounded px-2 py-1 text-xs text-slate-400 hover:bg-white/10"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          )}
+                </div>
+              </>,
+              document.body,
+            )}
         </div>
       </div>
     </div>

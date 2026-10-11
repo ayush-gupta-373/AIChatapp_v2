@@ -110,23 +110,27 @@ const MessageContainer = () => {
           </div>
 
           {aiResult && (
-            <div className="flex items-start gap-3 border-b border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-slate-200">
-              <div className="min-w-0 flex-1">
-                {aiSummaryInfo && (
-                  <p className="mb-2 text-xs text-slate-400">{aiSummaryInfo}</p>
-                )}
-                <p className="whitespace-pre-wrap break-words">{aiResult}</p>
+            <div className="max-h-[35vh] overflow-y-auto border-b border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-slate-200">
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  {aiSummaryInfo && (
+                    <p className="mb-2 text-xs text-slate-400">
+                      {aiSummaryInfo}
+                    </p>
+                  )}
+                  <p className="whitespace-pre-wrap break-words">{aiResult}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiResult("");
+                    setAiSummaryInfo("");
+                  }}
+                  className="shrink-0 text-xs text-indigo-300"
+                >
+                  Close
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setAiResult("");
-                  setAiSummaryInfo("");
-                }}
-                className="shrink-0 text-xs text-indigo-300"
-              >
-                Close
-              </button>
             </div>
           )}
 
