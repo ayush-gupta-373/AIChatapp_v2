@@ -20,7 +20,7 @@ const requestAI = async (prompt) => {
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.3,
-          maxOutputTokens: 4096,
+          maxOutputTokens: 8192,
         },
       }),
       signal: controller.signal,
@@ -131,7 +131,7 @@ exports.summarize = async (req, res) => {
     if (!transcript) return res.status(400).json({ message: "No text messages to summarize" });
     try {
       const summary = await requestAI(
-        `Summarize the conversation below. Cover its main topics, decisions, questions, and unresolved points. Include important details across the conversation, not only the latest messages. Use concise bullet points.\n\n${transcript}`,
+        `Write a detailed, comprehensive summary of the entire conversation below. Do not make it brief. Organize the response into sections for the main topics and their important details, decisions and reasons, questions and answers, and unresolved issues or next steps. Preserve names, dates, numbers, and meaningful context. Cover earlier as well as recent messages, merge repetition, and do not invent information.\n\n${transcript}`,
       );
       return res.json({ result: summary, ...summaryInput });
     } catch (error) {
