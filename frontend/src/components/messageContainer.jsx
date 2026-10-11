@@ -14,6 +14,7 @@ const MessageContainer = () => {
   const { messages } = useSelector((store) => store.message);
   const dispatch = useDispatch();
   const [aiResult, setAiResult] = useState("");
+  const [aiSummaryInfo, setAiSummaryInfo] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   useEffect(() => {
     return () => dispatch(setSelectedUser(null));
@@ -21,15 +22,43 @@ const MessageContainer = () => {
 
   const runAiAction = async (action) => {
     setAiLoading(true);
+    setAiSummaryInfo("");
     try {
+      const summaryMessages = Array.isArray(messages)
+        ? messages
+            .map((item) => {
+              const senderId = item.senderId?._id ?? item.senderId;
+              const attachmentText = item.attachment?.name
+                ? `[Attachment: ${item.attachment.name}]`
+                : "";
+              const text = item.message?.trim() || attachmentText;
+              if (!text) return null;
+
+              return {
+                sender:
+                  String(senderId) === String(authUser?._id)
+                    ? "You"
+                    : selectedUser?.fullName || "Other participant",
+                message: text,
+              };
+            })
+            .filter(Boolean)
+        : [];
       const response = await axios.post(
         `${API_BASE_URL}/api/v1/ai/${action}`,
         action === "summarize"
-          ? { messages }
+          ? { messages: summaryMessages }
           : { text: "", language: "English" },
         { withCredentials: true },
       );
       setAiResult(response.data.result);
+      if (action === "summarize") {
+        const { includedMessages, totalMessages, truncated, fallback } =
+          response.data;
+        setAiSummaryInfo(
+          `${fallback ? "Gemini unavailable; showing local excerpts. " : "Gemini summary. "}${includedMessages} of ${totalMessages} text messages included${truncated ? " (oldest context omitted at the model input limit)" : " (full conversation included)"}.`,
+        );
+      }
     } catch (error) {
       setAiResult(error.response?.data?.message || "AI feature unavailable");
     } finally {
@@ -82,12 +111,18 @@ const MessageContainer = () => {
 
           {aiResult && (
             <div className="flex items-start gap-3 border-b border-white/10 bg-slate-900/60 px-4 py-3 text-sm text-slate-200">
-              <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">
-                {aiResult}
-              </p>
+              <div className="min-w-0 flex-1">
+                {aiSummaryInfo && (
+                  <p className="mb-2 text-xs text-slate-400">{aiSummaryInfo}</p>
+                )}
+                <p className="whitespace-pre-wrap break-words">{aiResult}</p>
+              </div>
               <button
                 type="button"
-                onClick={() => setAiResult("")}
+                onClick={() => {
+                  setAiResult("");
+                  setAiSummaryInfo("");
+                }}
                 className="shrink-0 text-xs text-indigo-300"
               >
                 Close

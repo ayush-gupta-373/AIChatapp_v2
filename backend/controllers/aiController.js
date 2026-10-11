@@ -20,7 +20,7 @@ const requestAI = async (prompt) => {
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.3,
-          maxOutputTokens: 512,
+          maxOutputTokens: 4096,
         },
       }),
       signal: controller.signal,
@@ -68,32 +68,78 @@ const sendAIError = (res, error) => {
 };
 
 const createLocalSummary = (messages) => {
-  const recentMessages = messages
-    .map((item) => item.message?.trim())
-    .filter(Boolean)
-    .slice(-5);
+  const recentMessages = messages.slice(-20);
 
   if (!recentMessages.length) return "No text messages to summarize";
 
   return [
-    "Recent conversation highlights:",
-    ...recentMessages.map((message) => `- ${message}`),
+    "Gemini was unavailable. Recent conversation excerpts:",
+    ...recentMessages.map(({ sender, message }) => `- ${sender}: ${message}`),
   ].join("\n");
+};
+
+const MAX_SUMMARY_INPUT_CHARS = 3_000_000;
+
+const prepareSummaryMessages = (messages) => {
+  const textMessages = messages
+    .map((item) => ({
+      sender: typeof item.sender === "string" ? item.sender : "Participant",
+      message: typeof item.message === "string" ? item.message.trim() : "",
+    }))
+    .filter((item) => item.message);
+
+  const includedMessages = [];
+  let includedCharacters = 0;
+  let partiallyIncluded = false;
+
+  for (let index = textMessages.length - 1; index >= 0; index -= 1) {
+    const item = textMessages[index];
+    const line = `${item.sender}: ${item.message}`;
+    const separatorLength = includedMessages.length ? 1 : 0;
+    const availableCharacters =
+      MAX_SUMMARY_INPUT_CHARS - includedCharacters - separatorLength;
+
+    if (line.length <= availableCharacters) {
+      includedMessages.push(line);
+      includedCharacters += line.length + separatorLength;
+      continue;
+    }
+
+    if (!includedMessages.length && availableCharacters > item.sender.length + 2) {
+      includedMessages.push(
+        `${item.sender}: ${item.message.slice(-(availableCharacters - item.sender.length - 2))}`,
+      );
+      partiallyIncluded = true;
+    }
+    break;
+  }
+
+  const omittedMessages = textMessages.length - includedMessages.length;
+  return {
+    transcript: includedMessages.reverse().join("\n"),
+    totalMessages: textMessages.length,
+    includedMessages: includedMessages.length,
+    truncated: omittedMessages > 0 || partiallyIncluded,
+  };
 };
 
 exports.summarize = async (req, res) => {
   try {
-    const messages = Array.isArray(req.body.messages) ? req.body.messages.slice(-15) : [];
-    const transcript = messages.map((item) => item.message).filter(Boolean).join("\n");
+    const messages = Array.isArray(req.body.messages) ? req.body.messages : [];
+    const summaryInput = prepareSummaryMessages(messages);
+    const { transcript } = summaryInput;
     if (!transcript) return res.status(400).json({ message: "No text messages to summarize" });
     try {
-      const summary = await requestAI(`Summarize this private chat in concise bullet points:\n${transcript}`);
-      return res.json({ result: summary });
+      const summary = await requestAI(
+        `Summarize the conversation below. Cover its main topics, decisions, questions, and unresolved points. Include important details across the conversation, not only the latest messages. Use concise bullet points.\n\n${transcript}`,
+      );
+      return res.json({ result: summary, ...summaryInput });
     } catch (error) {
       if (error.status === 429 || error.status === 500 || error.status === 502 || error.status === 503 || error.status === 504) {
         return res.json({
           result: createLocalSummary(messages),
           fallback: true,
+          ...summaryInput,
         });
       }
       throw error;
