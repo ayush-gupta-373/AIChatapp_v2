@@ -29,6 +29,25 @@ const useGetRealTimeMessage = () => {
 
     socket.on("newMessage", handleNewMessage);
 
+    const handleUpdatedMessage = (updatedMessage) => {
+      if (!updatedMessage) return;
+
+      const selectedUserId = String(selectedUser._id);
+      const isRelevantMessage =
+        String(updatedMessage.senderId) === selectedUserId ||
+        String(updatedMessage.receiverId) === selectedUserId;
+      if (!isRelevantMessage) return;
+
+      dispatch(
+        setMessages(
+          (Array.isArray(messages) ? messages : []).map((item) =>
+            item._id === updatedMessage._id ? updatedMessage : item,
+          ),
+        ),
+      );
+    };
+    socket.on("messageUpdated", handleUpdatedMessage);
+
     const handleDeletedMessage = ({ messageId }) => {
       dispatch(setMessages(messages.filter((msg) => msg._id !== messageId)));
     };
@@ -36,6 +55,7 @@ const useGetRealTimeMessage = () => {
 
     return () => {
       socket.off("newMessage", handleNewMessage);
+      socket.off("messageUpdated", handleUpdatedMessage);
       socket.off("messageDeleted", handleDeletedMessage);
     };
   }, [socket, selectedUser, messages, dispatch]);

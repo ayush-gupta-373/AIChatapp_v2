@@ -118,6 +118,13 @@ exports.editMessage = async (req, res) => {
     message.edited = true;
     await message.save();
 
+    if (global.io) {
+      global.io
+        .to(`user:${message.senderId}`)
+        .to(`user:${message.receiverId}`)
+        .emit("messageUpdated", message);
+    }
+
     return res.status(200).json({ message });
   } catch (error) {
     return res.status(500).json({ message: "Unable to edit message" });
