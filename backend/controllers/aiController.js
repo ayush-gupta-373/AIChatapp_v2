@@ -17,10 +17,17 @@ const requestAI = async (prompt) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [{
+          role: "user",
+          parts: [{
+            text: attempt === 0
+              ? prompt
+              : `${prompt}\n\nYour previous response was incomplete. Return a complete, useful summary with multiple sections and enough detail to cover the conversation.`,
+          }],
+        }],
         generationConfig: {
           temperature: 0.3,
-          maxOutputTokens: 8192,
+          maxOutputTokens: attempt === 0 ? 8192 : 16384,
         },
       }),
       signal: controller.signal,
@@ -39,10 +46,26 @@ const requestAI = async (prompt) => {
       }
 
       const data = await response.json();
-      return (
-        data.candidates?.[0]?.content?.parts?.map((part) => part.text).join("") ||
-        "No response generated"
-      );
+      const candidate = data.candidates?.[0];
+      const result = candidate?.content?.parts
+        ?.map((part) => part.text || "")
+        .join("")
+        .trim();
+      const incomplete =
+        !result ||
+        result.length < 40 ||
+        (candidate.finishReason && candidate.finishReason !== "STOP");
+
+      if (incomplete) {
+        if (attempt === 0) continue;
+        const error = new Error(
+          `Gemini returned an incomplete summary${candidate?.finishReason ? ` (${candidate.finishReason})` : ""}`,
+        );
+        error.status = 502;
+        throw error;
+      }
+
+      return result;
     } catch (error) {
       if (error.name === "AbortError") {
         const timeoutError = new Error("AI request timed out. Please try again.");
@@ -65,17 +88,6 @@ const sendAIError = (res, error) => {
         ? 504
         : 503;
   return res.status(status).json({ message: error.message });
-};
-
-const createLocalSummary = (messages) => {
-  const recentMessages = messages.slice(-20);
-
-  if (!recentMessages.length) return "No text messages to summarize";
-
-  return [
-    "Gemini was unavailable. Recent conversation excerpts:",
-    ...recentMessages.map(({ sender, message }) => `- ${sender}: ${message}`),
-  ].join("\n");
 };
 
 const MAX_SUMMARY_INPUT_CHARS = 3_000_000;
@@ -135,11 +147,10 @@ exports.summarize = async (req, res) => {
       );
       return res.json({ result: summary, ...summaryInput });
     } catch (error) {
-      if (error.status === 429 || error.status === 500 || error.status === 502 || error.status === 503 || error.status === 504) {
-        return res.json({
-          result: createLocalSummary(messages),
-          fallback: true,
-          ...summaryInput,
+      if (error.status === 429) {
+        return res.status(429).json({
+          code: "RATE_LIMITED",
+          message: "Gemini API rate limit reached. Please try again later.",
         });
       }
       throw error;
