@@ -177,7 +177,7 @@ const Message = ({ message, authUser }) => {
         className={`flex mb-3 ${isSentByCurrentUser ? "justify-end" : "justify-start"}`}
       >
         <div
-          onClick={(event) => {
+          onContextMenu={(event) => {
             if (
               event.target.closest(
                 "button, input, select, textarea, a, audio, video, form",
@@ -185,6 +185,7 @@ const Message = ({ message, authUser }) => {
             ) {
               return;
             }
+            event.preventDefault();
             toggleMenu(event);
           }}
           className={`relative max-w-[80%] sm:max-w-[70%] px-4 py-2.5 shadow-lg border border-white/10 ${isSentByCurrentUser ? "bg-indigo-500/90 rounded-2xl rounded-tr-sm" : "bg-slate-800/80 rounded-2xl rounded-tl-sm"}`}
