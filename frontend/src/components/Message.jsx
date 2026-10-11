@@ -22,6 +22,14 @@ const formatMessageTime = (createdAt) => {
   return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 };
 
+const normalizeId = (value) => {
+  const id =
+    value && typeof value === "object"
+      ? (value._id ?? value.id ?? value.$oid)
+      : value;
+  return String(id ?? "").toLowerCase();
+};
+
 const Message = ({ message, authUser }) => {
   const scroll = useRef();
   const dispatch = useDispatch();
@@ -34,8 +42,12 @@ const Message = ({ message, authUser }) => {
   const [translationLanguage, setTranslationLanguage] = useState("Spanish");
   const [translatedText, setTranslatedText] = useState("");
   const [isTranslating, setIsTranslating] = useState(false);
-  const messageSenderId = message?.senderId?._id ?? message?.senderId;
-  const isSentByCurrentUser = String(messageSenderId) === String(authUser?._id);
+  const messageSenderId = normalizeId(message?.senderId);
+  const authUserId = normalizeId(
+    authUser?._id ?? authUser?.id ?? authUser?.userId,
+  );
+  const isSentByCurrentUser =
+    Boolean(messageSenderId) && messageSenderId === authUserId;
 
   useEffect(() => {
     scroll.current?.scrollIntoView({
